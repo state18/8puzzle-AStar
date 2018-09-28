@@ -5,189 +5,52 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ITCS_6150_HW1 {
-    class Program {
 
-        public static Random rnd;
+class Program {
 
-        static void Main(string[] args) {
+    static void Main(string[] args) {
 
-            rnd = new Random();
+        // Test PriorityQueue
+        PriorityQueue<int>.TestPriorityQueue();
 
-            var initData = new int[,] {
-                {0, 1, 3},
-                {4, 2, 5},
-                {7, 8, 6}
-            };
+        PuzzleState initState = null;
+        PuzzleState goalState = null;
 
-            var initState = new PuzzleState(initData);
-            var solver = new PuzzleSolver(initState);
-            int[] solverOutput = solver.ApplyBFS();
-            Console.WriteLine(String.Format("It took {0} generated unduplicate states to find the goal. \n" +
-                "The range of unduplicate states that COULD have been generated depending on successor generation order: {1} to {2}", solverOutput[0], solverOutput[1], solverOutput[2]));
-            Console.ReadKey();
+        try {
+            initState = new PuzzleState(args[0]);
+            goalState = new PuzzleState(args[1]);
+        } catch {
+            Console.WriteLine("Invalid input!\n" +
+                "Correct Example- Input in the form: 4,3,2,1,5,7,6,8,0 1,2,3,4,5,6,7,8,0 yields the following...\n" +
+                "Initial State\n" +
+                "4 3 2\n" +
+                "1 5 7\n" +
+                "6 8 0\n\n" +
+                "Goal State\n" +
+                "1 2 3\n" +
+                "4 5 6\n" +
+                "7 8 0\n");
+            Environment.Exit(1);
         }
+
+
+        PuzzleSolver solver = new PuzzleSolver(initState, goalState);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        PuzzleResults results1 = solver.ApplyAStar(Heuristic.MisplacedTiles);
+        watch.Stop();
+        Console.WriteLine(string.Format("Time for Heuristic 1: {0} ms", watch.ElapsedMilliseconds));
+
+        watch = System.Diagnostics.Stopwatch.StartNew();
+        PuzzleResults results2 = solver.ApplyAStar(Heuristic.ManhattanDistance);
+        watch.Stop();
+        Console.WriteLine(string.Format("Time for Heuristic 2: {0} ms", watch.ElapsedMilliseconds));
+
+        // TODO:
+        // Print method for PuzzleState (visualizes grid)
+        // Display found path... maybe PrintResults method on PuzzleResults object that displays path, nodes expanded/generated
+        // Verify that my generated/expanded numbers are correctly computed according to course standards.
+
+        Console.WriteLine("done");
     }
 
-    class PuzzleSolver {
-
-        PuzzleState InitState;
-        PuzzleState GoalState;
-
-        public PuzzleSolver(PuzzleState initState) {
-            this.InitState = initState;
-            this.GoalState = ComputeGoalState();
-        }
-
-
-        public int[] ApplyBFS() {
-            var q = new Queue<PuzzleState>();
-            var visited = new List<PuzzleState>();
-            var depthMap = new Dictionary<int, int>();
-            
-            var seenGoal = false;
-            var goalDepth = -1;
-            var numGeneratedAtFirstGoalSighting = -1;
-
-            visited.Add(InitState);
-            depthMap[0] = 0;
-            q.Enqueue(InitState);
-
-            var currentDepth = 0;
-
-            while(q.Count > 0) {
-                var current = q.Dequeue();
-
-                if(currentDepth < current.Depth) {
-                    currentDepth = current.Depth;
-                    depthMap[currentDepth] = depthMap[currentDepth-1];
-                }
-
-                depthMap[currentDepth]++;
-
-                if(seenGoal && currentDepth > goalDepth) {
-                    break;                   
-                }
-
-                var successors = current.GetSuccessors();
-                foreach(var s in successors) {
-                    s.Depth = currentDepth + 1;
-                    if(!visited.Contains(s)) {
-                        visited.Add(s);
-                        if (s.Equals(GoalState)) {
-                            seenGoal = true;
-                            goalDepth = s.Depth;
-                            numGeneratedAtFirstGoalSighting = visited.Count;
-                        }
-                        q.Enqueue(s);
-                    }
-                }
-            }
-
-            return new int[] { numGeneratedAtFirstGoalSighting, depthMap[goalDepth - 1] + 1, depthMap[goalDepth]};
-
-        }
-
-        private PuzzleState ComputeGoalState() {
-            var goalData = new int[InitState.GridSize, InitState.GridSize];
-            for(var i=0; i<InitState.GridSize; i++) {
-                for(var j=0; j<InitState.GridSize; j++) {
-                    goalData[i, j] = i * InitState.GridSize + j + 1;
-                }
-            }
-            goalData[InitState.GridSize - 1, InitState.GridSize - 1] = 0;
-            return new PuzzleState(goalData);
-        }
-
-    }
-
-    class PuzzleState {
-
-        public int GridSize;
-        public int Depth = 0;
-
-        int[,] Data;
-        
-        public PuzzleState(int[,] data) {
-            this.Data = data;
-            this.GridSize = data.GetLength(0);
-        }
-
-        public List<PuzzleState> GetSuccessors() {
-            // Find empty tile (0) coordinates.
-            int eRow = 0;
-            int eCol = 0;
-            bool foundZero = false;
-            for(var i=0; i<Data.GetLength(0); i++) {
-                for(var j=0; j<Data.GetLength(1); j++) {
-                    if (Data[i,j] == 0) {
-                        eRow = i;
-                        eCol = j;
-                        foundZero = true;
-                    }
-                }
-                if (foundZero)
-                    break;
-            }
-
-            List<PuzzleState> successors = new List<PuzzleState>();
-
-            if(eRow > 0) {
-                var newData = new int[Data.GetLength(0), Data.GetLength(1)];
-                Array.Copy(Data, newData, Data.Length);
-                // Swap 0 tile with above element.
-                newData[eRow, eCol] = newData[eRow - 1, eCol];
-                newData[eRow - 1, eCol] = 0;
-                successors.Add(new PuzzleState(newData));
-            }
-
-            if(eRow < Data.GetLength(0) - 1) {
-                var newData = new int[Data.GetLength(0), Data.GetLength(1)];
-                Array.Copy(Data, newData, Data.Length);
-                // Swap 0 tile with below element.
-                newData[eRow, eCol] = newData[eRow + 1, eCol];
-                newData[eRow + 1, eCol] = 0;
-                successors.Add(new PuzzleState(newData));
-            }
-
-            if (eCol > 0) {
-                var newData = new int[Data.GetLength(0), Data.GetLength(1)];
-                Array.Copy(Data, newData, Data.Length);
-                // Swap 0 tile with left element.
-                newData[eRow, eCol] = newData[eRow, eCol - 1];
-                newData[eRow, eCol - 1] = 0;
-                successors.Add(new PuzzleState(newData));
-            }
-
-            if (eCol < Data.GetLength(1) - 1) {
-                var newData = new int[Data.GetLength(0), Data.GetLength(1)];
-                Array.Copy(Data, newData, Data.Length);
-                // Swap 0 tile with right element.
-                newData[eRow, eCol] = newData[eRow, eCol + 1];
-                newData[eRow, eCol + 1] = 0;
-                successors.Add(new PuzzleState(newData));
-            }
-
-            return successors.OrderBy(item => Program.rnd.Next()).ToList();
-        }
-
-        public override bool Equals(object obj) {
-
-            if (obj == null)
-                return false;
-
-            var other = (PuzzleState)(obj);
-            for(var i=0; i<Data.GetLength(0); i++) {
-                for (var j = 0; j < Data.GetLength(1); j++) {
-                    if (this.Data[i, j] != other.Data[i, j])
-                        return false;
-                }
-            }
-            return true;
-        }
-
-        public override int GetHashCode() {
-            return this.Data.GetHashCode();
-        }
-    }
 }
