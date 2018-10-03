@@ -14,9 +14,8 @@ class PuzzleSolver {
     public PuzzleResults ApplyAStar(Heuristic heuristic) {
 
         PriorityQueue<PuzzleState> fringe = new PriorityQueue<PuzzleState>();
-        // List<PuzzleState> visited = new List<PuzzleState>();
+        // Closed set
         HashSet<PuzzleState> visited = new HashSet<PuzzleState>();
-        Dictionary<PuzzleState, int> totalCosts = new Dictionary<PuzzleState, int>();
 
         // We start with only the initial state generated.
         int numGenerated = 1;
@@ -24,12 +23,13 @@ class PuzzleSolver {
 
         PuzzleState pathEnd = null;
 
-        visited.Add(InitState);
         fringe.Enqueue(InitState, 0);
 
         while(!fringe.IsEmpty()) {
             PuzzleState current = fringe.Dequeue();
-            
+            visited.Add(current);
+            numExpanded++;
+
             // Goal check.
             if (current.Equals(GoalState)) {
                 pathEnd = current;
@@ -37,32 +37,31 @@ class PuzzleSolver {
             }
 
             List<PuzzleState> successors = current.GetSuccessors();
-            numExpanded++;
 
-            foreach (PuzzleState s in successors) {
-                s.Depth = current.Depth + 1;
+            foreach (PuzzleState s in successors) {               
                 if (!visited.Contains(s)) {
-                    visited.Add(s);
-                    numGenerated++;
 
                     // Compute heuristic value and add to total cost to get priority.
                     int hValue = Int32.MaxValue;
-                    if(heuristic == Heuristic.MisplacedTiles) {
+                    if (heuristic == Heuristic.MisplacedTiles) {
                         hValue = s.ComputeMisplacedTileDistance(GoalState);
-                    } else if(heuristic == Heuristic.ManhattanDistance) {
+                    } else if (heuristic == Heuristic.ManhattanDistance) {
                         hValue = s.ComputeManhattanDistance(GoalState);
+                    } else if (heuristic == Heuristic.None) {
+                        hValue = 0;
                     } else {
                         throw new ArgumentException("Expected MisplacedTiles or ManhattanDistance heuristic.");
                     }
 
                     int priority = s.Depth + hValue;
-                    fringe.Enqueue(s, priority);
+                    bool alreadyExisted = fringe.Enqueue(s, priority);
+                    if (!alreadyExisted)
+                        numGenerated++;
                 }
             }
 
         }
 
-        if(pathEnd == null) { }
 
         // Build path into list.
         List<PuzzleState> path = new List<PuzzleState>();
@@ -75,9 +74,6 @@ class PuzzleSolver {
         }
 
         path.Reverse();
-
-        // TODO remove and return {numExpanded, numGenerated}
-        Console.WriteLine(string.Format("Nodes generated: {0} -- Nodes expanded: {1}", numGenerated, numExpanded));
 
         PuzzleResults results = new PuzzleResults(numGenerated, numExpanded, path);
         return results;
@@ -133,4 +129,4 @@ class PuzzleSolver {
 
 }
 
-public enum Heuristic { MisplacedTiles, ManhattanDistance }
+public enum Heuristic { MisplacedTiles, ManhattanDistance, None }

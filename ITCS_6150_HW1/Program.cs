@@ -10,9 +10,6 @@ class Program {
 
     static void Main(string[] args) {
 
-        // Test PriorityQueue
-        PriorityQueue<int>.TestPriorityQueue();
-
         PuzzleState initState = null;
         PuzzleState goalState = null;
 
@@ -21,36 +18,36 @@ class Program {
             goalState = new PuzzleState(args[1]);
         } catch {
             Console.WriteLine("Invalid input!\n" +
-                "Correct Example- Input in the form: 4,3,2,1,5,7,6,8,0 1,2,3,4,5,6,7,8,0 yields the following...\n" +
+                "Correct Example- Input in the form: 8,3,5,4,1,6,2,7,0 1,2,3,8,0,4,7,6,5 yields the following...\n" +
                 "Initial State\n" +
-                "4 3 2\n" +
-                "1 5 7\n" +
-                "6 8 0\n\n" +
+                "8 3 5\n" +
+                "4 1 6\n" +
+                "2 7 0\n\n" +
                 "Goal State\n" +
                 "1 2 3\n" +
-                "4 5 6\n" +
-                "7 8 0\n");
+                "8 0 4\n" +
+                "7 6 5\n");
+            Console.WriteLine("Press enter to close...");
+            Console.Read();
             Environment.Exit(1);
         }
 
+        Heuristic[] heuristics = new Heuristic[] { Heuristic.ManhattanDistance };
 
-        PuzzleSolver solver = new PuzzleSolver(initState, goalState);
-        var watch = System.Diagnostics.Stopwatch.StartNew();
-        PuzzleResults results1 = solver.ApplyAStar(Heuristic.MisplacedTiles);
-        watch.Stop();
-        Console.WriteLine(string.Format("Time for Heuristic 1: {0} ms", watch.ElapsedMilliseconds));
+        foreach (Heuristic h in heuristics) {
 
-        watch = System.Diagnostics.Stopwatch.StartNew();
-        PuzzleResults results2 = solver.ApplyAStar(Heuristic.ManhattanDistance);
-        watch.Stop();
-        Console.WriteLine(string.Format("Time for Heuristic 2: {0} ms", watch.ElapsedMilliseconds));
+            PuzzleSolver solver = new PuzzleSolver(initState, goalState);
+            Console.WriteLine(string.Format("\n\nSolving with {0} heuristic...", h.ToString()));
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            PuzzleResults results = solver.ApplyAStar(h);
+            watch.Stop();
 
-        // TODO:
-        // Print method for PuzzleState (visualizes grid)
-        // Display found path... maybe PrintResults method on PuzzleResults object that displays path, nodes expanded/generated
-        // Verify that my generated/expanded numbers are correctly computed according to course standards.
+            results.Print();
+            Console.WriteLine(string.Format("Time elapsed: {0} ms", watch.ElapsedMilliseconds));
+        }
 
-        Console.WriteLine("done");
+        Console.WriteLine("Done! Press Enter key to close...");
+        Console.Read();
     }
 
 }

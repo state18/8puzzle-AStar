@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 /// </summary>
 /// <typeparam name="T">Item Type</typeparam>
 class PriorityQueue<T> {
-
+    private static Dictionary<int, int> inCounter = new Dictionary<int, int>();
+    private static Dictionary<int, int> outCounter = new Dictionary<int, int>();
     private Item[] items;
 
     private int size;
@@ -25,7 +26,7 @@ class PriorityQueue<T> {
         Random rnd = new Random();
         var pq = new PriorityQueue<int>(1);
         var testInput = new int[testSize];
-        
+
         // Enqueue
         for (int i = 0; i < testSize; i++) {
             testInput[i] = rnd.Next(testSize);
@@ -37,7 +38,7 @@ class PriorityQueue<T> {
         // Dequeue
         var testOutput = new int[testInput.Length];
         int numDequeued = 0;
-        while(!pq.IsEmpty()) { 
+        while (!pq.IsEmpty()) {
             testOutput[numDequeued] = pq.Dequeue();
             numDequeued++;
         }
@@ -45,8 +46,6 @@ class PriorityQueue<T> {
         Array.Sort(testInput);
 
         bool isPass = testInput.SequenceEqual(testOutput);
-        Console.WriteLine(string.Format("Priority Queue {0} the test!", isPass ? "passed" : "failed"));
-
         return isPass;
 
     }
@@ -55,25 +54,35 @@ class PriorityQueue<T> {
         return size == 0;
     }
 
-    public void Enqueue(T data, int priority) {
+    public bool Enqueue(T data, int priority) {
 
         // Update priority if item already exists in queue and new priority value is smaller.
+        bool alreadyExists = false;
 
         int foundIndex = -1;
-        for(int i=0; i<size; i++) {
-            if(items[i].Data.Equals(data)) {
+        for (int i = 0; i < size; i++) {
+            if (items[i].Data.Equals(data)) {
                 foundIndex = i;
                 break;
             }
         }
 
         if (foundIndex >= 0) {
-
-            if (items[foundIndex].Priority > priority) {
+            alreadyExists = true;
+            Item foundItem = items[foundIndex];
+            if (foundItem.Priority > priority) {
                 items[foundIndex] = new Item(data, priority);
+
                 SiftUp(foundIndex);
+
+                inCounter[foundItem.Priority]--;
+
+                if (inCounter.ContainsKey(priority))
+                    inCounter[priority]++;
+                else
+                    inCounter[priority] = 1;
             }
-            
+
         } else {
             // Item does not already exist in queue, so create and add it.
             Item newItem = new Item(data, priority);
@@ -92,11 +101,20 @@ class PriorityQueue<T> {
                     items[i] = tmp[i];
                 }
             }
+            if (inCounter.ContainsKey(priority))
+                inCounter[priority]++;
+            else
+                inCounter[priority] = 1;
         }
+
+
+
+        return alreadyExists;
 
     }
 
     public T Dequeue() {
+
         Item popped = items[0];
         Item newRoot = items[size - 1];
         items[0] = newRoot;
@@ -104,6 +122,12 @@ class PriorityQueue<T> {
         size--;
 
         SiftDown(0);
+
+        if (outCounter.ContainsKey(popped.Priority))
+            outCounter[popped.Priority]++;
+        else
+            outCounter[popped.Priority] = 1;
+
         return popped.Data;
     }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// 
@@ -16,12 +17,20 @@ public class PuzzleState {
         this.Data = data;
         this.GridSize = data.GetLength(0);
         this.Prev = prev;
+        if (prev != null)
+            this.Depth = prev.Depth + 1;
     }
 
     public PuzzleState(string textData) {
         // Convert to 2D array format.
         var tokens = textData.Split(',');
-        GridSize = (int)Math.Sqrt(tokens.Length);
+        var sqr = Math.Sqrt(tokens.Length);
+
+        if (sqr % 1 == 0)
+            GridSize = (int)sqr;
+        else
+            throw new ArgumentException("Expected square state inputs!");
+
         Data = new int[GridSize, GridSize];
         for (var i = 0; i < GridSize; i++) {
             for (var j = 0; j < GridSize; j++) {
@@ -58,15 +67,6 @@ public class PuzzleState {
             successors.Add(new PuzzleState(newData, this));
         }
 
-        if (eRow < Data.GetLength(0) - 1) {
-            var newData = new int[Data.GetLength(0), Data.GetLength(1)];
-            Array.Copy(Data, newData, Data.Length);
-            // Swap 0 tile with below element.
-            newData[eRow, eCol] = newData[eRow + 1, eCol];
-            newData[eRow + 1, eCol] = 0;
-            successors.Add(new PuzzleState(newData, this));
-        }
-
         if (eCol > 0) {
             var newData = new int[Data.GetLength(0), Data.GetLength(1)];
             Array.Copy(Data, newData, Data.Length);
@@ -84,6 +84,17 @@ public class PuzzleState {
             newData[eRow, eCol + 1] = 0;
             successors.Add(new PuzzleState(newData, this));
         }
+
+        if (eRow < Data.GetLength(0) - 1) {
+            var newData = new int[Data.GetLength(0), Data.GetLength(1)];
+            Array.Copy(Data, newData, Data.Length);
+            // Swap 0 tile with below element.
+            newData[eRow, eCol] = newData[eRow + 1, eCol];
+            newData[eRow + 1, eCol] = 0;
+            successors.Add(new PuzzleState(newData, this));
+        }
+
+       
 
         return successors;
     }
@@ -135,6 +146,21 @@ public class PuzzleState {
         return manhattanDist;
     }
 
+    public void Print(string title = null) {
+        if (title != null)
+            Console.WriteLine(title);
+
+        string topBottomBorder = new string('#', GridSize * 2 + 1);
+        Console.WriteLine(topBottomBorder);
+        for (int i = 0; i < GridSize; i++) {
+            for (int j = 0; j < GridSize; j++) {
+                Console.Write("|");
+                Console.Write(Data[i, j]);
+            }
+            Console.WriteLine("|");
+        }
+        Console.WriteLine(topBottomBorder);
+    }
 
     public override bool Equals(object obj) {
 
@@ -152,6 +178,6 @@ public class PuzzleState {
     }
 
     public override int GetHashCode() {
-        return this.Data.GetHashCode();
+        return Data[0, 0] + Data[GridSize - 1, GridSize - 1];
     }
 }
